@@ -35,10 +35,13 @@ Example for standard HSJA attack:
 
 `python demo.py --data cifar10 --attack hsja --scenario standard`
 
-For the optional DualTrack configuration, copy
-`configs/cifar10/hsja/cfg_dualtrack.json` to `cfg_standard.json` (or update
-your own scenario config), then run the same command. Each API query should
-carry a stable `session_id` attribute; queries without one use `default`.
+For the optional DualTrack configuration, use the included `dualtrack`
+scenario directly:
+
+`python demo.py --data cifar10 --attack hsja --scenario dualtrack`
+
+Each API query should carry a stable `session_id` attribute; queries without
+one use `default`.
 Before downloading model weights, run the synthetic smoke test:
 
 `python tools/smoke_dualtrack.py`
