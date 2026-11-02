@@ -61,9 +61,23 @@ class GWAD():
         thold = cfg["screen"]["thold"]
         fifo_depth = cfg["screen"]["n"]
         self.screener = Screener(enable=enable, thold=thold, sigma=3, n=fifo_depth, dim=32)
+        dualtrack_cfg = cfg.get("dualtrack", {})
+        self.dualtrack_enabled = bool(dualtrack_cfg.get("on", False))
+        if self.dualtrack_enabled:
+            from dualtrack import GWADDualTrackPipeline
+
+            self.dualtrack = GWADDualTrackPipeline(
+                threshold=dualtrack_cfg.get("update_threshold", 0.1),
+                similarity_threshold=dualtrack_cfg.get("similarity_threshold", 0.9),
+                window_size=dualtrack_cfg.get("window_size", 16 * 16),
+                buffer_size=dualtrack_cfg.get("buffer_size", 1024),
+            )
+        else:
+            self.dualtrack = None
 
         # example queue to calculate ds
         self.example_q = []
+        self.dualtrack_examples = {}
 
         # ds configurations
         self.ds_size = 16*16
@@ -106,7 +120,10 @@ class GWAD():
         self.hx = torch.zeros(7)
         self.show_detect = True
         self.screener.reset()
+        if self.dualtrack is not None:
+            self.dualtrack.reset()
         self.example_q.clear()
+        self.dualtrack_examples.clear()
         self.ds_q.clear()
         self.hods_flag = False
         print("\nGWAD_%s starts" % (self.mode))
@@ -118,7 +135,18 @@ class GWAD():
             return True
         return False
 
-    def examples_queue(self, x):
+    def examples_queue(self, x, session_id="default"):
+        if self.dualtrack is not None:
+            status, queue_id = self.dualtrack.assign_update(x, session_id)
+            self.suspicious = status != "PASS_BENIGN"
+            if self.suspicious:
+                examples = self.dualtrack_examples.setdefault(queue_id, [])
+                if len(examples) == 3:
+                    examples.pop(0)
+                examples.append(x)
+                self.example_q = examples
+            return
+
         if self.examples_ready():
             # if examples queue is full shift and empty oldest slot for new example
             self.example_q.pop(0)
@@ -261,11 +289,14 @@ class GWAD():
 
         # -- attack detection routine --
         # pre-process and example queue
-        self.examples_queue(x)
+        self.examples_queue(x, getattr(q, "session_id", "default"))
 
         # save query and update pre-process stats
         if self.mode == 'defence':
             self.save_query(q)
+
+        if self.dualtrack is not None and not self.suspicious:
+            return output
 
         # check example queue is full for detection
         if self.examples_ready() is False:
@@ -275,7 +306,17 @@ class GWAD():
         ds, norm = self.calculate_ds()
 
         # update ds vector
-        self.ds_queue(ds)
+        if self.dualtrack is not None:
+            status, _ = self.dualtrack.append_ds(
+                self.dualtrack.aggregator.queue_for_session(
+                    getattr(q, "session_id", "default")
+                ),
+                ds,
+            )
+            if status == "QUEUED":
+                return output
+        else:
+            self.ds_queue(ds)
 
         # make and update hods feature vector
         self.make_hods()

@@ -19,9 +19,10 @@ class WhiteBoxAttackBase:
 
 
 class Query:
-    def __init__(self, t='benign', x=None):
+    def __init__(self, t='benign', x=None, session_id='default'):
         self.t = t
         self.x = x
+        self.session_id = session_id
 
 
 class AdaptiveAttacks:
@@ -282,4 +283,3 @@ class HardLabelAttackBase(BlackBoxAtackCommonBase):
 
     def attack(self, sm, x_best):
         raise NotImplementedError
-
