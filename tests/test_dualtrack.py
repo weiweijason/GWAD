@@ -1,4 +1,5 @@
 import torch
+import pytest
 
 from dualtrack import (
     CrossSessionGraphAggregator,
@@ -16,7 +17,7 @@ def test_update_screener_separates_first_small_and_large_updates():
     assert not first.suspicious
     assert small.suspicious
     assert not large.suspicious
-    assert small.delta_norm == 0.05
+    assert small.delta_norm == pytest.approx(0.05)
 
 
 def test_aggregator_merges_similar_updates_across_sessions():
