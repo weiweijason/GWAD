@@ -22,6 +22,16 @@ networks and their weights can be downloaded from (https://github.com/huyvnphan/
 - Download weights resnet18.pt (refer to utilities/load_model to use other models and weigths))
 - Download cifar10 dataset (CIFAR-10 python version from https://www.cs.toronto.edu/~kriz/cifar.html)
 
+The CIFAR-10 files are not included in this repository. When `demo.py` calls
+`utilities/load_data.py`, torchvision downloads CIFAR-10 automatically into
+`./data` if the environment has network access:
+
+`python -c "from torchvision.datasets import CIFAR10; CIFAR10('./data', train=True, download=True); CIFAR10('./data', train=False, download=True)"`
+
+The target-model weights are also external; place `resnet18.pt` under
+`model/cifar10/` before running the full demo. The Delta-Net weights are
+expected at `model/delta/delta_ann.pt`.
+
 # Run
 Run by invoking `demo.py` as follows:
 
@@ -35,10 +45,13 @@ Example for standard HSJA attack:
 
 `python demo.py --data cifar10 --attack hsja --scenario standard`
 
-For the optional DualTrack configuration, copy
-`configs/cifar10/hsja/cfg_dualtrack.json` to `cfg_standard.json` (or update
-your own scenario config), then run the same command. Each API query should
-carry a stable `session_id` attribute; queries without one use `default`.
+For the optional DualTrack configuration, use the included `dualtrack`
+scenario directly:
+
+`python demo.py --data cifar10 --attack hsja --scenario dualtrack`
+
+Each API query should carry a stable `session_id` attribute; queries without
+one use `default`.
 Before downloading model weights, run the synthetic smoke test:
 
 `python tools/smoke_dualtrack.py`
