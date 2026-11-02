@@ -153,22 +153,36 @@ class GWADDualTrackPipeline:
         self.aggregator.reset()
         self._queues.clear()
 
+    def assign_update(
+        self, query: torch.Tensor, session_id: Hashable = "default"
+    ) -> Tuple[str, Optional[int]]:
+        """Screen an update and assign it to an aggregated queue."""
+        result = self.screener.process(query, session_id)
+        if not result.suspicious:
+            return "PASS_BENIGN", None
+        return (
+            "QUEUED",
+            self.aggregator.find_or_create_queue(session_id, result.delta),
+        )
+
+    def append_ds(
+        self, queue_id: int, ds: float
+    ) -> Tuple[str, Optional[Tuple[float, ...]]]:
+        """Append a DS value to a queue already assigned by ``assign_update``."""
+        queue = self._queues[queue_id]
+        queue.append(float(ds))
+        if len(queue) < self.window_size:
+            return "QUEUED", None
+        return "READY", tuple(queue)
+
     def process_update(
         self,
         query: torch.Tensor,
         session_id: Hashable = "default",
         ds: Optional[float] = None,
     ) -> Tuple[str, Optional[int], Optional[Tuple[float, ...]]]:
-        result = self.screener.process(query, session_id)
-        if not result.suspicious:
-            return "PASS_BENIGN", None, None
-
-        queue_id = self.aggregator.find_or_create_queue(session_id, result.delta)
-        if ds is None:
-            return "QUEUED", queue_id, None
-
-        queue = self._queues[queue_id]
-        queue.append(float(ds))
-        if len(queue) < self.window_size:
-            return "QUEUED", queue_id, None
-        return "READY", queue_id, tuple(queue)
+        status, queue_id = self.assign_update(query, session_id)
+        if status == "PASS_BENIGN" or ds is None:
+            return status, queue_id, None
+        status, window = self.append_ds(queue_id, ds)
+        return status, queue_id, window
