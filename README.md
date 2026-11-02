@@ -22,6 +22,16 @@ networks and their weights can be downloaded from (https://github.com/huyvnphan/
 - Download weights resnet18.pt (refer to utilities/load_model to use other models and weigths))
 - Download cifar10 dataset (CIFAR-10 python version from https://www.cs.toronto.edu/~kriz/cifar.html)
 
+The CIFAR-10 files are not included in this repository. When `demo.py` calls
+`utilities/load_data.py`, torchvision downloads CIFAR-10 automatically into
+`./data` if the environment has network access:
+
+`python -c "from torchvision.datasets import CIFAR10; CIFAR10('./data', train=True, download=True); CIFAR10('./data', train=False, download=True)"`
+
+The target-model weights are also external; place `resnet18.pt` under
+`model/cifar10/` before running the full demo. The Delta-Net weights are
+expected at `model/delta/delta_ann.pt`.
+
 # Run
 Run by invoking `demo.py` as follows:
 
