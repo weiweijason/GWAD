@@ -9,6 +9,7 @@ Pytorch code for CVPR 2025 paper [Mind the Gap: Detecting Black-box Adversarial 
 - tqdm (optional)
 - json
 - argparse
+- scikit-learn (for the optional GWAD-DualTrack cross-session aggregator)
 
 # Pretrained Model
 networks and their weights can be downloaded from (https://github.com/huyvnphan/PyTorch_CIFAR10?tab=readme-ov-file)
@@ -33,6 +34,17 @@ Arguments
 Example for standard HSJA attack: 
 
 `python demo.py --data cifar10 --attack hsja --scenario standard`
+
+## GWAD-DualTrack
+
+`dualtrack.py` provides an optional update-space screener and a
+cross-session graph aggregator. `UpdateVarianceScreener` treats small L2
+updates as attack-like and large image switches as benign. The
+`GWADDualTrackPipeline` keeps a separate 256-update DS window per aggregated
+session queue, so the existing Delta-Net classifier can be reused by a caller
+when a window returns `READY`. Pass a stable session identifier from the API
+layer to `process_update`; the original `GWAD` path remains unchanged unless
+this pipeline is explicitly enabled by the caller.
 
 # Statistics report
 ```
